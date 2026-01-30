@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Анализ заполненности зала</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Анализ заполненности зала</h1>
+        <p>Детекция стульев и людей, сегментация объектов и классификация сцены с предобученными моделями YOLOv8.</p>
+    </header>
+
+    {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <section class="top-section">
+        <div class="upload-card card">
+            <h2>Загрузка данных</h2>
+            <form method="post" action="{{ url_for('analyze') }}" enctype="multipart/form-data" id="analyze-form">
+                <div class="field-row">
+                    <label for="mode">Режим</label>
+                    <select name="mode" id="mode">
+                        <option value="image">Изображение</option>
+                        <option value="video">Видео</option>
+                        <option value="webcam">Кадр с камеры</option>
+                    </select>
+                </div>
+
+                <div class="field-row" id="file-field">
+                    <label for="file">Файл</label>
+                    <input type="file" name="file" id="file" accept="image/*,video/*">
+                </div>
+
+                <div class="field-row">
+                    <label for="task">Тип задачи</label>
+                    <select name="task" id="task">
+                        <option value="all">Детекция + сегментация</option>
+                        <option value="detection">Только детекция</option>
+                        <option value="segmentation">Только сегментация</option>
+                    </select>
+                </div>
+
+                <div class="field-row">
+                    <label for="max_chairs">Количество стульев в зале (макс.)</label>
+                    <input type="number" name="max_chairs" id="max_chairs" placeholder="Введите количество стульев" min="1" max="500" required>
+                </div>
+
+                <button type="submit" class="btn primary">Запустить анализ</button>
+            </form>
+        </div>
+
+        <div class="stats-card card">
+            <h2>Статистика</h2>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-title">Всего запросов</div>
+                    <div class="stat-value">{{ summary.total }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Средняя заполненность</div>
+                    <div class="stat-value">{{ summary.avg_occupancy }}%</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Последний статус</div>
+                    <div class="stat-value">{{ summary.last_level }}</div>
+                </div>
+                <div class="stat actions">
+                    <a class="btn secondary" href="{{ url_for('report_pdf') }}">PDF отчёт</a>
+                    <a class="btn secondary" href="{{ url_for('report_excel') }}">Excel история</a>
+                    <a class="btn secondary" href="{{ url_for('history_json') }}">JSON история</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {% if result %}
+    <section class="card">
+        <h2>Результат</h2>
+        <div class="result-grid">
+            <div>
+                <ul class="metrics">
+                    <li><strong>Режим:</strong> {{ result.mode }}</li>
+                    <li><strong>Задача:</strong> {{ result.task }}</li>
+                    <li><strong>Стулья:</strong> {{ result.meta.chairs }}</li>
+                    <li><strong>Люди:</strong> {{ result.meta.persons }}</li>
+                    <li><strong>Заполненность:</strong> {{ result.meta.occupancy_pct }}% ({{ result.meta.level }})</li>
+                    <li><strong>Классификация:</strong> {{ result.meta.classification.label }} ({{ result.meta.classification.score }})</li>
+                </ul>
+                <a class="btn" href="{{ '/' + result.output_path }}" target="_blank">Открыть файл</a>
+            </div>
+            <div>
+                {% if result.output_path.endswith('.mp4') %}
+                    <video controls width="640" src="{{ '/' + result.output_path }}"></video>
+                {% else %}
+                    <img src="{{ '/' + result.output_path }}" alt="Результат" class="preview">
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="card">
+        <h2>Последние запросы</h2>
+        <div class="history">
+            {% if history %}
+            <table>
+                <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>Режим</th>
+                    <th>Задача</th>
+                    <th>Стулья</th>
+                    <th>Люди</th>
+                    <th>Заполненность</th>
+                    <th>Вывод</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in history %}
+                    <tr>
+                        <td>{{ item.timestamp }}</td>
+                        <td>{{ item.mode }}</td>
+                        <td>{{ item.task }}</td>
+                        <td>{{ item.meta.chairs }}</td>
+                        <td>{{ item.meta.persons }}</td>
+                        <td>{{ item.meta.occupancy_pct }}%</td>
+                        <td><a href="{{ '/' + item.output_path }}" target="_blank">файл</a></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p>История пока пустая — загрузите файл или получите кадр с камеры.</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
