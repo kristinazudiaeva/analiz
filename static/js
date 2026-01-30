@@ -1,0 +1,15 @@
+const modeSelect = document.getElementById('mode');
+const fileField = document.getElementById('file-field');
+
+function toggleFileField() {
+  if (modeSelect.value === 'webcam') {
+    fileField.style.display = 'none';
+  } else {
+    fileField.style.display = 'flex';
+  }
+}
+
+if (modeSelect) {
+  modeSelect.addEventListener('change', toggleFileField);
+  toggleFileField();
+}
